@@ -1,11 +1,12 @@
 package com.alec.db.utilities;
 
 import java.sql.Connection;
-import java.sql.Date;
+import java.util.Date;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.sql.Timestamp;
 import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -19,7 +20,7 @@ public class FightDBUtil {
 	
 	private static final Logger LOGGER = Logger.getLogger(Driver.class.getName());
 	
-	public static int insertFight(LogInfoRaw info, Connection conn){
+	public static int insertFight(LogInfoRaw info, Connection conn) throws SQLException, ParseException{
 		LOGGER.fine("Inserting fight.");
 		
 		ResultSet existsResultSet = null;
@@ -31,7 +32,7 @@ public class FightDBUtil {
 				+ "VALUES(?,?,?,?)";
 		
 		String fightExists = "SELECT (Fight_ID) FROM `mansterlogger`.`fight`"
-				+ "WHERE Log=?";
+				+ "WHERE Boss_Name=? and Date Between ? and ?";
 		
 		
 		//process the fight
@@ -40,7 +41,23 @@ public class FightDBUtil {
 			//setup query and execute
 			PreparedStatement fightRecord = conn.prepareStatement(fightExists);
 			
-			fightRecord.setString(1, info.getUploadLinks().get(0));
+			fightRecord.setString(1, info.getFightName());
+			
+			String stringDate = info.getTimeStartStd();
+			DateFormat myDate = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss X");
+			Timestamp timestamp = null;
+			
+			try {
+				Date utilDate = myDate.parse(stringDate);
+				timestamp = new Timestamp(utilDate.getTime());
+			} catch (ParseException e) {
+				LOGGER.severe("Failed to parse date for fight.");
+				throw e;
+			}
+			
+			// 5 second radius from given log time
+			fightRecord.setTimestamp(2, new Timestamp(timestamp.getTime() - 5000L));
+			fightRecord.setTimestamp(3, new Timestamp(timestamp.getTime() + 5000L));
 			
 			existsResultSet = fightRecord.executeQuery();
 			
@@ -55,44 +72,29 @@ public class FightDBUtil {
 				// logs dont 0 pad ms (ex 25ms instead of 025ms)
 				String durationRaw = info.getDuration();
 				long ms;
+				ms = Long.parseLong(durationRaw.substring(0,2))*60000L;
+				ms += Long.parseLong(durationRaw.substring(4,6))*1000L;
+				
 				switch (durationRaw.length()) {
 				case 11:
 					// format XXm XXs Xms
-					ms = Long.parseLong(durationRaw.substring(0,2))*60000L;
-					ms += Long.parseLong(durationRaw.substring(4,6))*1000L;
 					ms += Long.parseLong(durationRaw.substring(8,9));
 					break;
 				case 12:
 					// format XXm XXs XXms
-					ms = Long.parseLong(durationRaw.substring(0,2))*60000L;
-					ms += Long.parseLong(durationRaw.substring(4,6))*1000L;
 					ms += Long.parseLong(durationRaw.substring(8,10));
 					break;
 				default:
 					// format XXm XXs XXXms
-					ms = Long.parseLong(durationRaw.substring(0,2))*60000L;
-					ms += Long.parseLong(durationRaw.substring(4,6))*1000L;
 					ms += Long.parseLong(durationRaw.substring(8,11));
 				}
 				
 				insertRecord.setLong(2, ms);
 				
-				// insert date. info date is a util.date but we need sql.date. convert to sql date by getting the time and making a new sql date 
-				String stringDate = info.getTimeStartStd();
-				String cutStringDate = stringDate.substring(0, 10);				
-				DateFormat myDate = new SimpleDateFormat("yyyy-MM-dd");
+				// insert date and time as a timestamp
+				insertRecord.setTimestamp(3, timestamp);				
 				
-				java.util.Date utilDate;
-				java.sql.Date timestamp = null;
-				try {
-					utilDate = myDate.parse(cutStringDate);
-					timestamp = new java.sql.Date(utilDate.getTime());
-				} catch (ParseException e) {
-					LOGGER.severe("Failed to parse date for fight.");
-				}
-				
-				insertRecord.setDate(3, timestamp);
-				
+				// insert boss name
 				insertRecord.setString(4, info.getFightName());
 				
 				int rowAffected = insertRecord.executeUpdate();
@@ -107,11 +109,13 @@ public class FightDBUtil {
 			} else {
 				// return the existing record
 				fightID = existsResultSet.getInt(1);
-				LOGGER.fine(String.format("Fight already exists. See fight %d.", fightID));
+				LOGGER.info(String.format("Fight already exists. See fight %d.", fightID));
+				return fightID;
 			}
 			
 		} catch (SQLException ex) {
 			LOGGER.severe(ex.getMessage());
+			throw ex;
 		} finally {
 			try {
 				if( fightIDResultSet != null) {
@@ -122,9 +126,10 @@ public class FightDBUtil {
 				}
 			} catch (SQLException e) {
 				LOGGER.severe(String.format("Closing faulted with message: %d", e.getMessage()));
+				throw e;
 			}
 		}
-		LOGGER.fine(String.format("New fight %d added to database.", fightID));
+		LOGGER.info(String.format("New fight %d added to database.", fightID));
 		return fightID;
 	}
 

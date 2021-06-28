@@ -19,14 +19,14 @@ import com.alec.game.model.Players;
 public class MainDBUtil {
 	private static final Logger LOGGER = Logger.getLogger(Driver.class.getName());
 	
-	public static String insertMain(LogInfoRaw info, HashMap<String, Integer> charIDs, int FightID, Connection conn) {
+	public static String insertMain(LogInfoRaw info, HashMap<String, Integer> charIDs, int FightID, Connection conn) throws SQLException {
 		LOGGER.fine("Inserting main table data.");
 		
 		ResultSet existsResultSet = null;
 		
 		//prepared statements 
 		String insertMain = "INSERT INTO `mansterlogger`.`main` (Fight_ID, Character_ID, Profession, "
-				+ "Build, DPS, PowerDPS, CondiDPS, Breakbar, CriticalRate, FlankingRate, Scholar) Values (?,?,?,?,?,?,?,?,?,?,?)";
+				+ "Build, Type, DPS, PowerDPS, CondiDPS, Breakbar, CriticalRate, FlankingRate, Scholar) Values (?,?,?,?,?,?,?,?,?,?,?,?)";
 		
 		String mainRecordExists = "SELECT * FROM `mansterlogger`.`main`"
 				+ "WHERE Fight_ID=? AND Character_ID=?";
@@ -45,16 +45,18 @@ public class MainDBUtil {
 			// if no record found for that combo generate the new record. 
 			// if there was a record found there "should" be a record for all of the players.
 			// "should" be safe to exit execution and return separate statement. 
-			if ( existsResultSet.next() == false) {
-				// run builds tool to get player builds 
-				HashMap<String, String> playerBuilds = BuildHelper.decideBuild(info);
+			if ( existsResultSet.next() == false) {				
 				for (Players i :  info.getPlayers()) {
 					PreparedStatement insertMainRecord = conn.prepareStatement(insertMain);
 					
 					insertMainRecord.setInt(1, FightID);
 					insertMainRecord.setInt(2, charIDs.get(i.getName()));
 					insertMainRecord.setString(3, i.getProfession());
-					insertMainRecord.setString(4, playerBuilds.get(i.getName()));
+					
+					// ************** Build Breakdown ****************
+					BuildContainer playerBuild = BuildHelper02.decideBuild2(i);
+					insertMainRecord.setString(4, playerBuild.getPlayerBuild());
+					insertMainRecord.setString(5, playerBuild.getBuildType());
 					
 					// ************** DPS and Breakbar Data Retrieval *********************
 					// gets the list of targets. The targets each have a list of playerDPS by phase. 
@@ -64,10 +66,10 @@ public class MainDBUtil {
 					//grabs DPS and breakbar breakdown on the boss over the entire fight 
 					PlayerDPS fullFightDPSBreakdown = bossDPSList.get(0);
 					
-					insertMainRecord.setInt(5, fullFightDPSBreakdown.getDps());
-					insertMainRecord.setInt(6, fullFightDPSBreakdown.getPowerDps());
-					insertMainRecord.setInt(7, fullFightDPSBreakdown.getCondiDps());
-					insertMainRecord.setInt(8, fullFightDPSBreakdown.getBreakbarDamage());
+					insertMainRecord.setInt(6, fullFightDPSBreakdown.getDps());
+					insertMainRecord.setInt(7, fullFightDPSBreakdown.getPowerDps());
+					insertMainRecord.setInt(8, fullFightDPSBreakdown.getCondiDps());
+					insertMainRecord.setInt(9, fullFightDPSBreakdown.getBreakbarDamage());
 					
 					// *************** Scholar Flanking Crit Logic *************************
 					// damage modifiers. specifically to get scholar uptime atm
@@ -110,9 +112,9 @@ public class MainDBUtil {
 						flankingRate = (flankingHits / totalHits);
 					}
 					
-					insertMainRecord.setFloat(9, criticalRate);
-					insertMainRecord.setFloat(10, flankingRate);
-					insertMainRecord.setFloat(11, scholar);
+					insertMainRecord.setFloat(10, criticalRate);
+					insertMainRecord.setFloat(11, flankingRate);
+					insertMainRecord.setFloat(12, scholar);
 					
 					@SuppressWarnings("unused")
 					int rowsAdded = insertMainRecord.executeUpdate();
@@ -128,6 +130,7 @@ public class MainDBUtil {
 					}
 				} catch (SQLException e) {
 					LOGGER.severe(String.format("Closing faulted with message: %d", e.getMessage()));
+					throw e;
 				} 
 				
 				return String.format("Records already exist for this fight. See fight ID %d for more info.", FightID);
@@ -136,6 +139,7 @@ public class MainDBUtil {
 		
 		}  catch (SQLException ex) {
 			LOGGER.severe(ex.getMessage()); 
+			throw ex;
 		} finally {
 			try {
 				if (existsResultSet != null) {
@@ -143,6 +147,7 @@ public class MainDBUtil {
 				}
 			} catch (SQLException e) {
 				LOGGER.severe(String.format("Closing faulted with message: %d", e.getMessage()));
+				throw e;
 			} 
 		}
 		

@@ -1,10 +1,8 @@
 package com.alec.game.model;
 
-import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
-import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
@@ -90,5 +88,5 @@ public class LogInfoRaw {
 	public void setDamageModMap(Map<String, DamageModInfo> damageModMap) {
 		this.damageModMap = damageModMap;
 	}
-	
+
 }	

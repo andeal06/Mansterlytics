@@ -24,8 +24,6 @@ public class DBBuilder {
 		//TODO system.println -> log printouts 
 		LOGGER.info(String.format("Parsing %s", file.getName()));
 		
-		ObjectMapper mapper = new ObjectMapper();
-		LogInfoRaw info = mapper.readValue(file, LogInfoRaw.class);
 		
 		Connection myConn = null;
 		int fightID = -666;
@@ -34,6 +32,10 @@ public class DBBuilder {
 			
 			// turn off auto commit
 			myConn.setAutoCommit(false);
+			
+			//parse json file
+			ObjectMapper mapper = new ObjectMapper();
+			LogInfoRaw info = mapper.readValue(file, LogInfoRaw.class);
 			
 			//insert fight 
 			fightID = FightDBUtil.insertFight(info, myConn);
@@ -52,14 +54,14 @@ public class DBBuilder {
 			LOGGER.fine(boonTableReturn);
 			
 			// if all successful commit 
-			myConn.commit();
-			myConn.close();
+			myConn.commit();			
 			
 			LOGGER.info(String.format("Succesfully parsed JSON file. See Fight ID: %d. ", fightID));
 			
 		} catch (Exception ex) {
 			LOGGER.warning(String.format("DB upload fail with exception: %s. Rolling back. Check file: %s", ex, file.getName()));
 			myConn.rollback();
+		} finally {
 			myConn.close();
 		}
 		

@@ -24,7 +24,7 @@ public class JDBCUtil {
     public static Connection getConnection() throws SQLException {
         Connection conn = null;
 
-        try (FileInputStream f = new FileInputStream("C:\\Users\\alec1\\eclipse-workspace\\LogProcessor1.0\\src\\com\\alec\\db.properties")) {
+        try (FileInputStream f = new FileInputStream("C:\\Users\\alec1\\git\\Mansterlytics\\LogProcessor1.0\\src\\com\\alec\\db.properties")) {
 
             // load the properties file
             Properties pros = new Properties();

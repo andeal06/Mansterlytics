@@ -16,7 +16,7 @@ import com.alec.game.model.Players;
 public class CharDBUtil {
 	private static final Logger LOGGER = Logger.getLogger(Driver.class.getName());
 	
-	public static HashMap<String, Integer> insertPlayerChar(List<Players> Players, Connection conn) {
+	public static HashMap<String, Integer> insertPlayerChar(List<Players> Players, Connection conn) throws SQLException {
 		
 		LOGGER.fine("Inserting characters");
 		
@@ -70,6 +70,7 @@ public class CharDBUtil {
 				
 			} catch (SQLException ex) {
 				LOGGER.severe(ex.getMessage());
+				throw ex;
 			} finally {
 				try {
 					if( characterIDResultSet != null) {
@@ -80,6 +81,7 @@ public class CharDBUtil {
 					}
 				} catch (SQLException e) {
 					LOGGER.severe(String.format("Closing faulted with message: %d", e.getMessage()));
+					throw e;
 				}
 		}
 		

@@ -18,7 +18,7 @@ public class CharBoonsDBUtil {
 	
 	private static final Logger LOGGER = Logger.getLogger(Driver.class.getName());
 	
-	public static String  insertCharacterBoons(LogInfoRaw info,  HashMap<String, Integer> charIDs, int FightID, Connection conn) {
+	public static String  insertCharacterBoons(LogInfoRaw info,  HashMap<String, Integer> charIDs, int FightID, Connection conn) throws SQLException {
 		LOGGER.fine("Inserting fight boon data");
 		
 		ResultSet existsResultSet = null;
@@ -62,13 +62,15 @@ public class CharBoonsDBUtil {
 					}
 				} catch (SQLException e) {
 					LOGGER.severe(String.format("Closing faulted with message: %d", e.getMessage()));
+					throw e;
 				} 
 				
 				return String.format("Records already exist for this fight. See fight ID %d for more info.", FightID);
 			}
 			
 		} catch (SQLException ex) {
-			LOGGER.severe(ex.getMessage()); 
+			LOGGER.severe(ex.getMessage());
+			throw ex;
 		} finally {
 			try {
 				if (existsResultSet != null) {
@@ -76,6 +78,7 @@ public class CharBoonsDBUtil {
 				}
 			} catch (SQLException e) {
 				LOGGER.severe(String.format("Closing faulted with message: %d", e.getMessage()));
+				throw e;
 			} 
 		}
 		

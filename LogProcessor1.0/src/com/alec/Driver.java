@@ -29,6 +29,7 @@ public class Driver {
 			}
 		} catch (IOException x) {
 			LOGGER.severe(x.toString());
+			
 		}
 		LOGGER.info("Completed Directory Scraping");
 	
